@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Commodity Pricing Grid — Sensitivity Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Inter", system-ui, sans-serif;
+  letter-spacing: -0.2px;
+  background:#f1f5f9;color:#1e293b;line-height:1.5
+}
+.header{background:#0f172a;border-bottom:3px solid #1e40af;color:#fff;padding:24px 32px}
+.header h1{font-size:24px;font-weight:700;letter-spacing:-0.5px}
+.header p{font-size:13px;opacity:.7;margin-top:4px}
+.header .mobile-hint{font-size:11px;opacity:.6;margin-top:6px}
+.nav{display:flex;gap:6px;margin-top:14px}
+.nav button{padding:6px 16px;border-radius:6px;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;cursor:pointer;font-size:13px;font-weight:500}
+.nav button.active{background:rgba(255,255,255,.2)}
+.container{max-width:1300px;margin:0 auto;padding:20px 28px 48px}
+.card{background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:20px;overflow:hidden}
+.card-head{padding:14px 18px;border-bottom:1px solid #e2e8f0;font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.card-head span{font-size:11px;color:#94a3b8;font-weight:400}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:9px 12px;text-align:right;font-weight:600;font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.3px;background:#f8fafc;border-bottom:2px solid #e2e8f0}
+th:first-child,th:nth-child(2),th:nth-child(3){text-align:left}
+td{padding:9px 12px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:500}
+td:first-child,td:nth-child(2),td:nth-child(3){text-align:left}
+tr.clickable{cursor:pointer;transition:background .12s}
+tr.clickable:hover{background:#f0f9ff}
+tr:nth-child(even){background:#fafafa}
+.mono{font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px}
+.red{color:#dc2626}.green{color:#16a34a}.blue{color:#1e40af}.gray{color:#94a3b8}.bold{font-weight:700}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600}
+.pill-auto{color:#2563eb;background:#dbeafe}.pill-app{color:#059669;background:#d1fae5}
+.pill-elec{color:#7c3aed;background:#ede9fe}.pill-fmcg{color:#d97706;background:#fef3c7}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.presets span{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px}
+.preset-btn{padding:4px 12px;border-radius:14px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;font-size:12px;font-weight:500;color:#334155}
+.preset-btn:hover{background:#f0f9ff;border-color:#93c5fd}
+.reset-btn{padding:4px 12px;border-radius:14px;border:1px solid #fca5a5;background:#fef2f2;cursor:pointer;font-size:12px;font-weight:500;color:#dc2626}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+.chart-box{background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:18px}
+.chart-box h3{font-size:13px;font-weight:700;color:#334155;margin-bottom:14px}
+.expand-row{background:#f8fafc;padding:10px 18px 14px 44px}
+.expand-row table{max-width:850px}
+.expand-row th{background:#eef2ff}
+.cat-header{padding:12px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid transparent}
+.cat-header:hover{background:#f8fafc}
+.cat-header .label{display:flex;align-items:center;gap:10px}
+.cat-header .label strong{font-size:14px}
+.cat-header .count{font-size:11px;color:#94a3b8}
+.modified-badge{font-size:10px;padding:2px 8px;border-radius:10px;background:#dbeafe;color:#1e40af;font-weight:600}
+.input-row{display:grid;grid-template-columns:200px 90px 1fr 72px 56px;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f8fafc}
+.input-row .name{font-size:13px;font-weight:500}
+.input-row .sub{font-size:10px;color:#94a3b8}
+.input-row input[type=range]{width:100%;cursor:pointer;accent-color:#2563eb}
+.input-row input[type=number]{width:68px;padding:3px 5px;border:1px solid #e2e8f0;border-radius:5px;font-size:12px;text-align:right;font-family:monospace}
+.method-section{max-width:800px}
+.method-section h3{font-size:15px;font-weight:700;color:#1e40af;margin:18px 0 6px}
+.method-section p{font-size:14px;color:#334155;line-height:1.7;margin-bottom:12px}
+.disclaimer{margin-top:20px;padding:14px 18px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a;font-size:13px;color:#92400e;font-weight:500}
+.source-line{font-size:11px;color:#94a3b8;text-align:center;margin-top:8px}
+.arrow{display:inline-block;transition:transform .2s;font-size:10px;color:#94a3b8;margin-right:6px}
+.arrow.open{transform:rotate(90deg)}
+.hidden{display:none}
+.insight-strip{padding:16px 20px;background:#f8fafc}
+.insight-label{font-size:12px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+.insight-text{margin-top:6px;font-size:14px;color:#1e293b;line-height:1.6}
+.footer{text-align:center;padding:24px 0 8px;font-size:11px;color:#94a3b8;letter-spacing:.3px}
+@media(max-width:900px){.charts-grid{grid-template-columns:1fr}.input-row{grid-template-columns:1fr 70px 1fr 60px 50px}}
+@media(max-width:768px){
+  th:nth-child(5),th:nth-child(6),th:nth-child(7),th:nth-child(8),
+  td:nth-child(5),td:nth-child(6),td:nth-child(7),td:nth-child(8){display:none}
+  .chart-box{padding:14px}
+  .chart-box canvas{height:320px !important}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Commodity Pricing Grid</h1>
+  <p>Sensitivity Analysis: How raw material price changes impact consumer goods COGS in India</p>
+  <p class="mobile-hint">Best experienced on tablet or desktop for full scenario interaction.</p>
+  <div class="nav">
+    <button class="active" onclick="showView('dashboard',this)">Dashboard</button>
+    <button onclick="showView('inputs',this)">Inputs</button>
+    <button onclick="showView('methodology',this)">Methodology</button>
+  </div>
+</div>
+
+<div class="container">
+  <!-- DASHBOARD VIEW -->
+  <div id="view-dashboard">
+    <div class="presets">
+      <span>Quick Scenarios:</span>
+      <button class="preset-btn" onclick="applyPreset('steel5')">Steel +5%</button>
+      <button class="preset-btn" onclick="applyPreset('oil10')">Oil +10%</button>
+      <button class="preset-btn" onclick="applyPreset('chips15')">Chips +15%</button>
+      <button class="preset-btn" onclick="applyPreset('rubber8')">Rubber +8%</button>
+      <button class="preset-btn" onclick="applyPreset('broad3')">Broad +3%</button>
+      <button class="reset-btn hidden" id="resetBtn" onclick="resetAll()">Reset All</button>
+    </div>
+
+    <!-- Executive Insight Strip -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="insight-strip">
+        <div class="insight-label">Executive Observation</div>
+        <div class="insight-text">
+          Broad commodity shocks transmit asymmetrically. Automotive exhibits higher metals sensitivity,
+          Electronics shows semiconductor concentration risk, and FMCG impact is narrower but faster
+          in edible oil-intensive categories.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">COGS Impact Summary <span>Click any row to see material breakdown</span></div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th style="width:28px"></th><th>Output Good</th><th>Segment</th>
+            <th>Current COGS</th><th>Mapped %</th><th>Trend COGS</th>
+            <th>Trend Delta</th><th>User COGS</th><th>User Delta</th>
+          </tr></thead>
+          <tbody id="summaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-box"><h3>COGS Change % — All Goods</h3><canvas id="chartPct"></canvas></div>
+      <div class="chart-box"><h3>Key Inputs: 4-Quarter Price Trend (Base 100)</h3><canvas id="chartTrend"></canvas></div>
+    </div>
+    <div class="card" style="padding:18px">
+      <h3 style="font-size:13px;font-weight:700;color:#334155;margin-bottom:14px">Absolute COGS Comparison (High-Value Goods)</h3>
+      <canvas id="chartAbs"></canvas>
+    </div>
+    <div class="source-line">Data: MCX India, PPAC, NMDC, SIAM, CEAMA, SEA, FCI, Rubber Board, SteelMint, ICIS, Company Annual Reports (FY24)</div>
+  </div>
+
+  <!-- INPUTS VIEW -->
+  <div id="view-inputs" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h2 style="font-size:18px;font-weight:700">Raw Material Price Inputs</h2>
+      <button class="reset-btn hidden" id="resetBtn2" onclick="resetAll()">Reset All</button>
+    </div>
+    <p style="font-size:13px;color:#64748b;margin-bottom:18px">Adjust sliders or type values. Changes reflect instantly on the Dashboard.</p>
+    <div id="inputCategories"></div>
+  </div>
+
+  <!-- METHODOLOGY VIEW -->
+  <div id="view-methodology" class="hidden">
+    <div class="card" style="padding:28px 36px">
+      <div class="method-section">
+        <h2 style="font-size:20px;font-weight:700;margin-bottom:20px;color:#0f172a">Methodology &amp; Data Sources</h2>
+        <h3>What This Tool Does</h3>
+        <p>This sensitivity model maps the raw material composition of 10 common consumer goods in India and calculates how commodity price changes pass through to their Cost of Goods Sold (COGS). It covers 50 raw materials across metals, plastics, electronics, petrochemicals, agricultural commodities, and key components.</p>
+        <h3>How It Calculates</h3>
+        <p>For each output good, 73–80% of COGS is mapped to specific raw materials. The remaining 20–27% (labour, overheads, logistics) is held constant. When you change a raw material price, only the mapped portion recalculates: <strong>New COGS = Sum of (Material Cost × (1 + Your % Change)) + Unmapped Cost.</strong></p>
+        <h3>Composition Sources</h3>
+        <p>Material compositions are derived from annual reports of listed Indian companies (Maruti Suzuki, Bajaj Auto, Voltas, Dixon Technologies, ITC, Britannia, Adani Wilmar), industry body data (SIAM for automobiles, CEAMA for electronics), product teardown analyses, and IMARC manufacturing economics reports. Where exact breakdowns are proprietary, industry-standard estimates are used and clearly marked.</p>
+        <h3>Price Data Sources</h3>
+        <p>Quarterly prices (Q2 FY25 through Q1 FY26) sourced from: MCX India (metals), PPAC (crude oil), NMDC (iron ore), FCI (wheat), Rubber Board of India, GAIL/Plastemart (polymers), SEA/NCDEX (edible oils), SteelMint, ICIS (petrochemicals), Trading Economics, and industry trade portals.</p>
+        <h3>Limitations</h3>
+        <p>Exact component-level cost breakdowns are proprietary for most Indian manufacturers. Compositions are indicative industry estimates, not audited figures. Electronics pricing (semiconductors, LCD panels) relies on industry estimates rather than exchange-traded prices. This tool is for scenario analysis, not precise cost accounting.</p>
+        <h3>Disclaimer</h3>
+        <p>This model is provided for educational and strategic discussion purposes only. The cost compositions presented are indicative estimates based on publicly available disclosures, industry reports, and sectoral analysis. They do not represent audited internal cost structures of any specific company. Commodity prices are historical references and may not reflect real-time or contract-level pricing dynamics. This tool does not constitute investment advice, valuation guidance, or financial recommendation. Users are advised to conduct independent verification before relying on any outputs for decision-making purposes.</p>
+        <div class="disclaimer">Built for CxO audiences by a Data-Driven Analytical Think Tank that decrypts opaque economics for the common consumer.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">Version 1.0 &nbsp;|&nbsp; For Governance Discussion &nbsp;|&nbsp; India Focused</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+const GOODS=[
+  {name:"Passenger Car (Mid-Segment)",short:"Car",cogs:550000,seg:"Automotive"},
+  {name:"Two-Wheeler (Motorcycle)",short:"2-Wheeler",cogs:62000,seg:"Automotive"},
+  {name:"Refrigerator (Frost-Free)",short:"Fridge",cogs:15000,seg:"Appliance"},
+  {name:"Air Conditioner (1.5T Split)",short:"AC",cogs:23000,seg:"Appliance"},
+  {name:"LED Television (43 inch)",short:"LED TV",cogs:22500,seg:"Electronics"},
+  {name:"Washing Machine (Front-Load)",short:"Washer",cogs:18000,seg:"Appliance"},
+  {name:"Smartphone (Mid-Range)",short:"Phone",cogs:12500,seg:"Electronics"},
+  {name:"Laptop (Mid-Range)",short:"Laptop",cogs:42000,seg:"Electronics"},
+  {name:"Packaged Biscuits (per kg)",short:"Biscuits",cogs:135,seg:"FMCG"},
+  {name:"Edible Oil (per Litre)",short:"Ed. Oil",cogs:115,seg:"FMCG"},
+];
+const RM=[
+  {c:"Industrial Metals",n:"Steel (HR Coil)",u:"INR/T",p:[51500,49800,48200,49500]},
+  {c:"Industrial Metals",n:"Iron Ore",u:"INR/T",p:[5200,4800,5400,5100]},
+  {c:"Industrial Metals",n:"Aluminium",u:"INR/kg",p:[208,215,222,218]},
+  {c:"Industrial Metals",n:"Copper",u:"INR/kg",p:[780,820,795,810]},
+  {c:"Industrial Metals",n:"Zinc",u:"INR/kg",p:[238,248,255,252]},
+  {c:"Industrial Metals",n:"Nickel",u:"INR/kg",p:[1480,1520,1600,1550]},
+  {c:"Industrial Metals",n:"Tin",u:"INR/kg",p:[2550,2680,2750,2700]},
+  {c:"Industrial Metals",n:"Lead",u:"INR/kg",p:[183,186,189,191]},
+  {c:"Industrial Metals",n:"Gold",u:"INR/10g",p:[62500,68200,74800,78500]},
+  {c:"Industrial Metals",n:"Silver",u:"INR/kg",p:[74500,82000,88500,91200]},
+  {c:"Industrial Metals",n:"Stainless Steel (SS304)",u:"INR/kg",p:[195,200,208,205]},
+  {c:"Plastics & Polymers",n:"Polypropylene (PP)",u:"INR/kg",p:[92,95,93,97]},
+  {c:"Plastics & Polymers",n:"Polyethylene (HDPE)",u:"INR/kg",p:[88,90,87,92]},
+  {c:"Plastics & Polymers",n:"PVC Resin",u:"INR/kg",p:[72,75,70,74]},
+  {c:"Plastics & Polymers",n:"ABS Plastic",u:"INR/kg",p:[168,175,180,165]},
+  {c:"Rubber",n:"Natural Rubber (RSS-4)",u:"INR/kg",p:[162,168,177,175]},
+  {c:"Rubber",n:"Synthetic Rubber (SBR)",u:"INR/kg",p:[165,170,178,180]},
+  {c:"Construction",n:"Cement (OPC 53)",u:"INR/bag",p:[388,378,370,382]},
+  {c:"Construction",n:"Float Glass",u:"INR/sqft",p:[45,46,48,47]},
+  {c:"Construction",n:"Timber / Plywood",u:"INR/sqft",p:[60,62,65,63]},
+  {c:"Electronics",n:"Semiconductor Chips",u:"INR/unit",p:[95,100,105,102]},
+  {c:"Electronics",n:"PCB",u:"INR/sqft",p:[380,395,410,400]},
+  {c:"Electronics",n:"LCD/LED Panel",u:"INR/unit",p:[3800,3900,4100,3950]},
+  {c:"Electronics",n:"Lithium (Battery)",u:"INR/kg",p:[1500,1450,1380,1350]},
+  {c:"Electronics",n:"SMD Components",u:"INR/1000u",p:[60,62,58,61]},
+  {c:"Petrochemicals",n:"Crude Oil (Indian)",u:"INR/bbl",p:[6850,6500,6200,6400]},
+  {c:"Petrochemicals",n:"Naphtha",u:"INR/T",p:[52000,50500,49000,51000]},
+  {c:"Petrochemicals",n:"Ethylene",u:"INR/T",p:[70000,68500,72000,71000]},
+  {c:"Petrochemicals",n:"Methanol",u:"INR/T",p:[25000,24000,23500,24500]},
+  {c:"Petrochemicals",n:"Industrial Paints",u:"INR/L",p:[420,430,445,440]},
+  {c:"Chemicals",n:"Caustic Soda",u:"INR/T",p:[38000,37000,36500,38500]},
+  {c:"Chemicals",n:"Soda Ash",u:"INR/T",p:[28000,27500,26800,27200]},
+  {c:"Chemicals",n:"Titanium Dioxide",u:"INR/kg",p:[210,215,220,218]},
+  {c:"Textiles",n:"Cotton",u:"INR/Candy",p:[57000,59500,62000,60500]},
+  {c:"Textiles",n:"Polyester Staple Fiber",u:"INR/kg",p:[98,100,102,101]},
+  {c:"Textiles",n:"Nylon",u:"INR/kg",p:[195,200,208,205]},
+  {c:"Agri / Edible",n:"Wheat Flour",u:"INR/kg",p:[25.5,26,26.8,25.2]},
+  {c:"Agri / Edible",n:"Sugar",u:"INR/kg",p:[37,38,39.5,38.5]},
+  {c:"Agri / Edible",n:"Palm Oil (Crude)",u:"INR/T",p:[82000,85000,92000,88000]},
+  {c:"Agri / Edible",n:"Soybean Oil",u:"INR/T",p:[85000,88000,95000,91000]},
+  {c:"Agri / Edible",n:"Milk Solids (SMP)",u:"INR/kg",p:[238,242,250,248]},
+  {c:"Agri / Edible",n:"Cocoa Butter",u:"INR/kg",p:[1350,1450,1650,1580]},
+  {c:"Packaging",n:"Corrugated Board",u:"INR/kg",p:[30,31,33,32]},
+  {c:"Packaging",n:"Tin Plate",u:"INR/kg",p:[88,90,92,91]},
+  {c:"Packaging",n:"Glass Bottles",u:"INR/unit",p:[10,10.5,11,10.8]},
+  {c:"Packaging",n:"Flexible Packaging",u:"INR/kg",p:[140,145,150,148]},
+  {c:"Key Components",n:"Compressor (AC/Fridge)",u:"INR/unit",p:[8500,8700,8900,8800]},
+  {c:"Key Components",n:"Electric Motor",u:"INR/unit",p:[3200,3300,3400,3350]},
+  {c:"Key Components",n:"Wiring Harness",u:"INR/kg",p:[920,950,980,960]},
+  {c:"Key Components",n:"Refrigerant Gas (R32)",u:"INR/kg",p:[280,290,310,300]},
+];
+
+const C=Array.from({length:50},()=>Array(10).fill(0));
+C[0][0]=.28;C[2][0]=.06;C[3][0]=.03;C[4][0]=.01;C[7][0]=.01;C[10][0]=.02;C[11][0]=.02;C[14][0]=.05;C[15][0]=.04;C[18][0]=.02;C[20][0]=.08;C[21][0]=.02;C[29][0]=.03;C[47][0]=.03;C[48][0]=.03;
+C[0][1]=.32;C[2][1]=.08;C[3][1]=.02;C[4][1]=.01;C[7][1]=.005;C[10][1]=.03;C[11][1]=.02;C[14][1]=.05;C[15][1]=.09;C[20][1]=.04;C[21][1]=.015;C[29][1]=.02;C[47][1]=.03;C[48][1]=.02;
+C[0][2]=.25;C[2][2]=.04;C[3][2]=.08;C[10][2]=.02;C[11][2]=.05;C[12][2]=.03;C[18][2]=.02;C[21][2]=.03;C[46][2]=.20;C[47][2]=.02;C[48][2]=.015;C[49][2]=.03;
+C[0][3]=.14;C[2][3]=.07;C[3][3]=.10;C[10][3]=.01;C[11][3]=.03;C[20][3]=.02;C[21][3]=.04;C[46][3]=.25;C[47][3]=.03;C[48][3]=.02;C[49][3]=.05;
+C[0][4]=.08;C[2][4]=.02;C[3][4]=.03;C[11][4]=.05;C[14][4]=.04;C[18][4]=.02;C[20][4]=.12;C[21][4]=.16;C[22][4]=.18;C[24][4]=.03;C[47][4]=.01;C[48][4]=.02;
+C[0][5]=.14;C[2][5]=.02;C[3][5]=.05;C[10][5]=.18;C[11][5]=.04;C[14][5]=.02;C[15][5]=.04;C[20][5]=.03;C[21][5]=.08;C[47][5]=.15;C[48][5]=.02;
+C[2][6]=.06;C[3][6]=.03;C[10][6]=.02;C[14][6]=.03;C[18][6]=.03;C[20][6]=.16;C[21][6]=.08;C[22][6]=.22;C[23][6]=.08;C[24][6]=.04;C[48][6]=.01;
+C[2][7]=.05;C[3][7]=.03;C[10][7]=.02;C[14][7]=.04;C[18][7]=.015;C[20][7]=.22;C[21][7]=.08;C[22][7]=.18;C[23][7]=.06;C[24][7]=.03;C[47][7]=.01;C[48][7]=.015;
+C[31][8]=.01;C[36][8]=.35;C[37][8]=.08;C[38][8]=.12;C[40][8]=.05;C[41][8]=.03;C[42][8]=.04;C[45][8]=.08;
+C[30][9]=.02;C[31][9]=.01;C[38][9]=.65;C[42][9]=.015;C[43][9]=.015;C[45][9]=.05;
+
+// ═══════════════════════════════════════════════════════════════
+// STATE & HELPERS
+// ═══════════════════════════════════════════════════════════════
+let changes=new Array(50).fill(0);
+let expandedGood=-1;
+let openCat="";
+let chartPct,chartTrend,chartAbs;
+const PILL={Automotive:"pill-auto",Appliance:"pill-app",Electronics:"pill-elec",FMCG:"pill-fmcg"};
+
+function fmt(v,d){d=d||0;if(Math.abs(v)>=100000)return"\u20B9"+(v/100000).toFixed(2)+"L";if(Math.abs(v)>=1000)return"\u20B9"+Math.round(v).toLocaleString("en-IN");return"\u20B9"+v.toFixed(d)}
+function pf(v){return(v>=0?"+":"")+(v*100).toFixed(2)+"%"}
+function trend(i){return(RM[i].p[3]-RM[i].p[0])/RM[i].p[0]}
+
+function compute(){
+  return GOODS.map(function(g,j){
+    var mc=0,mu=0,mt=0,tm=0,mats=[];
+    for(var i=0;i<50;i++){
+      var p=C[i][j];if(p<=0)continue;
+      var cc=g.cogs*p,t4=trend(i),un=cc*(1+changes[i]),tn=cc*(1+t4);
+      mc+=cc;mu+=un;mt+=tn;tm+=p;
+      mats.push({i:i,name:RM[i].n,pct:p,cc:cc,un:un,tn:tn,t4:t4,uc:changes[i]});
+    }
+    var um=g.cogs-mc;
+    return{name:g.name,short:g.short,seg:g.seg,cogs:g.cogs,tm:tm,mc:mc,um:um,
+      uCogs:mu+um,tCogs:mt+um,uPct:(mu+um-g.cogs)/g.cogs,tPct:(mt+um-g.cogs)/g.cogs,mats:mats};
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════
+function render(){
+  var R=compute(),hasInput=changes.some(function(v){return v!==0});
+  document.getElementById("resetBtn").classList.toggle("hidden",!hasInput);
+  document.getElementById("resetBtn2").classList.toggle("hidden",!hasInput);
+
+  var html="";
+  R.forEach(function(r,j){
+    var cls=PILL[r.seg]||"";
+    var isExp=expandedGood===j;
+    var dec=r.cogs<1000?2:0;
+    html+='<tr class="clickable" onclick="toggleGood('+j+')">';
+    html+='<td><span class="arrow'+(isExp?" open":"")+'">&#9654;</span></td>';
+    html+='<td style="font-weight:600">'+r.short+'</td>';
+    html+='<td><span class="pill '+cls+'">'+r.seg+'</span></td>';
+    html+='<td class="mono">'+fmt(r.cogs,dec)+'</td>';
+    html+='<td class="mono">'+(r.tm*100).toFixed(1)+'%</td>';
+    html+='<td class="mono">'+fmt(r.tCogs,dec)+'</td>';
+    html+='<td class="mono bold '+(r.tPct>=0?"red":"green")+'">'+pf(r.tPct)+'</td>';
+    html+='<td class="mono bold">'+fmt(r.uCogs,dec)+'</td>';
+    html+='<td class="mono bold '+(r.uPct>0?"red":r.uPct<0?"green":"gray")+'" style="font-size:14px">'+(hasInput?pf(r.uPct):"\u2014")+'</td>';
+    html+='</tr>';
+    if(isExp){
+      html+='<tr><td colspan="9" class="expand-row">';
+      html+='<div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:6px">'+r.name+' \u2014 Material Breakdown (COGS: '+fmt(r.cogs,dec)+')</div>';
+      html+='<table><thead><tr><th style="text-align:left">Material</th><th>% of COGS</th><th>Current Cost</th><th>4Q Trend</th><th>Your Input</th><th>New Cost</th><th>Delta</th></tr></thead><tbody>';
+      var sorted=r.mats.slice().sort(function(a,b){return b.pct-a.pct});
+      sorted.forEach(function(m){
+        var delta=m.un-m.cc;
+        html+='<tr><td style="text-align:left;font-weight:500">'+m.name+'</td>';
+        html+='<td class="mono">'+(m.pct*100).toFixed(1)+'%</td>';
+        html+='<td class="mono">'+fmt(m.cc,dec)+'</td>';
+        html+='<td class="mono '+(m.t4>=0?"red":"green")+'">'+(m.t4>=0?"+":"")+(m.t4*100).toFixed(1)+'%</td>';
+        html+='<td class="mono '+(m.uc!==0?"blue":"gray")+'">'+(m.uc!==0?((m.uc>=0?"+":"")+(m.uc*100).toFixed(1)+"%"):"\u2014")+'</td>';
+        html+='<td class="mono">'+fmt(m.un,dec)+'</td>';
+        html+='<td class="mono bold '+(delta>0?"red":delta<0?"green":"gray")+'">'+(m.uc!==0?((delta>=0?"+":"")+fmt(delta,dec)):"\u2014")+'</td></tr>';
+      });
+      html+='</tbody></table></td></tr>';
+    }
+  });
+  document.getElementById("summaryBody").innerHTML=html;
+  updateCharts(R);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════════
+function updateCharts(R){
+  var labels=R.map(function(r){return r.short});
+  var tPcts=R.map(function(r){return+(r.tPct*100).toFixed(2)});
+  var uPcts=R.map(function(r){return+(r.uPct*100).toFixed(2)});
+
+  if(chartPct){chartPct.data.labels=labels;chartPct.data.datasets[0].data=tPcts;chartPct.data.datasets[1].data=uPcts;chartPct.update();}
+  else{chartPct=new Chart(document.getElementById("chartPct"),{type:"bar",data:{labels:labels,datasets:[{label:"4Q Trend",data:tPcts,backgroundColor:"#ea580c"},{label:"Your Scenario",data:uPcts,backgroundColor:"#15803d"}]},options:{responsive:true,plugins:{legend:{labels:{font:{size:11}}}},scales:{y:{ticks:{callback:function(v){return v+"%"},font:{size:11}},grid:{color:"#f1f5f9"}},x:{ticks:{font:{size:10}}}}}});}
+
+  var keyIdx=[0,2,3,38,20],keyNames=["Steel","Aluminium","Copper","Palm Oil","Semicon"],colors=["#1e40af","#ea580c","#16a34a","#d97706","#7c3aed"];
+  var qLabels=["Q2 FY25","Q3 FY25","Q4 FY25","Q1 FY26"];
+  var datasets=keyIdx.map(function(idx,ki){return{label:keyNames[ki],data:[0,1,2,3].map(function(qi){return+(RM[idx].p[qi]/RM[idx].p[0]*100).toFixed(1)}),borderColor:colors[ki],backgroundColor:colors[ki]+"22",tension:.3,pointRadius:4,borderWidth:2}});
+  if(chartTrend){chartTrend.data.datasets=datasets;chartTrend.update();}
+  else{chartTrend=new Chart(document.getElementById("chartTrend"),{type:"line",data:{labels:qLabels,datasets:datasets},options:{responsive:true,plugins:{legend:{labels:{font:{size:11}}}},scales:{y:{min:85,max:115,ticks:{font:{size:11}},grid:{color:"#f1f5f9"}},x:{ticks:{font:{size:11}}}}}});}
+
+  var hv=R.filter(function(r){return r.cogs>=1000});
+  var hvL=hv.map(function(r){return r.short});
+  if(chartAbs){chartAbs.data.labels=hvL;chartAbs.data.datasets[0].data=hv.map(function(r){return Math.round(r.cogs)});chartAbs.data.datasets[1].data=hv.map(function(r){return Math.round(r.tCogs)});chartAbs.data.datasets[2].data=hv.map(function(r){return Math.round(r.uCogs)});chartAbs.update();}
+  else{chartAbs=new Chart(document.getElementById("chartAbs"),{type:"bar",data:{labels:hvL,datasets:[{label:"Current",data:hv.map(function(r){return Math.round(r.cogs)}),backgroundColor:"#1e40af"},{label:"Trend",data:hv.map(function(r){return Math.round(r.tCogs)}),backgroundColor:"#ea580c"},{label:"Your Scenario",data:hv.map(function(r){return Math.round(r.uCogs)}),backgroundColor:"#15803d"}]},options:{responsive:true,plugins:{legend:{labels:{font:{size:11}}}},scales:{y:{ticks:{callback:function(v){return v>=100000?(v/100000).toFixed(1)+"L":v>=1000?(v/1000).toFixed(0)+"K":v},font:{size:11}},grid:{color:"#f1f5f9"}},x:{ticks:{font:{size:11}}}}}});}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INPUTS VIEW
+// ═══════════════════════════════════════════════════════════════
+function buildInputs(){
+  var cats=[],seen={};
+  RM.forEach(function(m,i){if(!seen[m.c]){seen[m.c]=[];cats.push(m.c)}seen[m.c].push(i)});
+  var html="";
+  cats.forEach(function(cat){
+    var indices=seen[cat];var isOpen=openCat===cat;
+    var hasMod=indices.some(function(i){return changes[i]!==0});
+    html+='<div class="card" style="margin-bottom:10px">';
+    html+='<div class="cat-header" onclick="toggleCat(\''+cat+'\')">';
+    html+='<div class="label"><span class="arrow'+(isOpen?" open":"")+'">&#9654;</span><strong>'+cat+'</strong><span class="count">'+indices.length+' items</span></div>';
+    if(hasMod)html+='<span class="modified-badge">Modified</span>';
+    html+='</div>';
+    if(isOpen){
+      html+='<div style="padding:6px 16px 14px">';
+      indices.forEach(function(idx){
+        var m=RM[idx],v=changes[idx],t=trend(idx);
+        html+='<div class="input-row">';
+        html+='<div><div class="name">'+m.n+'</div><div class="sub">'+m.u+' | Latest: '+m.p[3].toLocaleString("en-IN")+'</div></div>';
+        html+='<div class="mono '+(t>=0?"red":"green")+'" style="font-size:11px">4Q: '+(t>=0?"+":"")+(t*100).toFixed(1)+'%</div>';
+        html+='<input type="range" min="-30" max="30" step="0.5" value="'+(v*100)+'" oninput="onSlider('+idx+',this.value)">';
+        html+='<input type="number" value="'+((v*100).toFixed(1))+'" step="0.5" onchange="onNum('+idx+',this.value)">';
+        html+='<span class="mono bold '+(v>0?"red":v<0?"green":"gray")+'">'+(v!==0?((v>0?"+":"")+(v*100).toFixed(1)+"%"):"0%")+'</span>';
+        html+='</div>';
+      });
+      html+='</div>';
+    }
+    html+='</div>';
+  });
+  document.getElementById("inputCategories").innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INTERACTIONS
+// ═══════════════════════════════════════════════════════════════
+function showView(id,btn){
+  document.getElementById("view-dashboard").classList.toggle("hidden",id!=="dashboard");
+  document.getElementById("view-inputs").classList.toggle("hidden",id!=="inputs");
+  document.getElementById("view-methodology").classList.toggle("hidden",id!=="methodology");
+  document.querySelectorAll(".nav button").forEach(function(b){b.classList.remove("active")});
+  if(btn)btn.classList.add("active");
+  if(id==="inputs")buildInputs();
+}
+function toggleGood(j){expandedGood=expandedGood===j?-1:j;render();}
+function toggleCat(cat){openCat=openCat===cat?"":cat;buildInputs();}
+function onSlider(idx,val){changes[idx]=parseFloat(val)/100;render();buildInputs();}
+function onNum(idx,val){changes[idx]=parseFloat(val||0)/100;render();buildInputs();}
+function resetAll(){changes=new Array(50).fill(0);render();buildInputs();}
+function applyPreset(p){
+  changes=new Array(50).fill(0);
+  if(p==="steel5"){changes[0]=.05;changes[10]=.05}
+  else if(p==="oil10"){changes[25]=.10;changes[38]=.10;changes[39]=.10}
+  else if(p==="chips15"){changes[20]=.15;changes[21]=.10;changes[22]=.12;changes[24]=.08}
+  else if(p==="broad3"){for(var i=0;i<50;i++)changes[i]=.03}
+  else if(p==="rubber8"){changes[15]=.08;changes[16]=.08}
+  render();buildInputs();
+}
+
+// Boot
+render();
+</script>
+</body>
+</html>
